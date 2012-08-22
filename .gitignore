@@ -1,0 +1,8 @@
+*.pyc
+*.egg-info
+*log.gz
+*.bash
+build/*
+dist/*
+.coverage
+dev.db
