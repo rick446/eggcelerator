@@ -2,6 +2,8 @@ import os
 import sys
 import socket
 import subprocess
+import logging
+from ConfigParser import ConfigParser
 
 from path import path
 from pkg_resources import parse_requirements, Distribution, WorkingSet, get_build_platform
