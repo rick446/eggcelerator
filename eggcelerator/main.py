@@ -62,8 +62,9 @@ class Eggcelerator(object):
 
         if self._s3_cache:
             log.info('Final sync with %s', self._s3_cache)
-            cmd = ['s3cmd', '-c', self._s3_config, 'sync',
-                   self._local_cache, self._s3_cache ]
+            cmd = ['s3cmd', '-c', self._s3_config, 'sync' ]
+            cmd += self._local_cache.glob('*')
+            cmd.append(self._s3_cache)
             log.debug('Command is %r', map(str, cmd))
             check_call(cmd)
 
