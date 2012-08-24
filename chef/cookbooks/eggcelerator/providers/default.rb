@@ -1,7 +1,5 @@
 action :create do
 
-  puts "AWS_ACCESS=#{new_resource.aws_access}"
-
   ini = "#{new_resource.virtualenv}/eggcelerator.ini"
   s3cfg = "#{new_resource.virtualenv}/eggcelerator-s3cmd.ini"
   cmd = "#{new_resource.virtualenv}/bin/eggcelerator"

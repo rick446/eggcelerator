@@ -16,10 +16,9 @@ class Eggcelerator(object):
         local_cache=None, build_cache=None,
         s3_cache=None, s3_config=None):
         if not s3_cache.endswith('/'): s3_cache += '/'
-        if not local_cache.endswith('/'): local_cache += '/'
 
         self._requirement = requirement
-        self._local_cache = path(local_cache).expand()
+        self._local_cache = path(local_cache).expand() + '/'
         self._build_cache = path(build_cache).expand()
         self._pi_remote = PackageIndex(remote_package_index)
         self._pi_local = PackageIndex(self._local_cache)
@@ -32,9 +31,11 @@ class Eggcelerator(object):
         if not self._build_cache.exists():
             self._build_cache.makedirs()
 
+        s3cmd = path(sys.prefix) / 'bin/s3cmd'
+
         if self._s3_cache:
             log.info('Initial sync with %s', self._s3_cache)
-            cmd = ['s3cmd', '-c', self._s3_config, 'sync',
+            cmd = [s3cmd, '-c', self._s3_config, 'sync',
                    self._s3_cache, self._local_cache ]
             log.debug('Command is %r', map(str, cmd))
             check_call(cmd)
@@ -62,7 +63,7 @@ class Eggcelerator(object):
 
         if self._s3_cache:
             log.info('Final sync with %s', self._s3_cache)
-            cmd = ['s3cmd', '-c', self._s3_config, 'sync' ]
+            cmd = [s3cmd, '-c', self._s3_config, 'sync' ]
             cmd += self._local_cache.glob('*')
             cmd.append(self._s3_cache)
             log.debug('Command is %r', map(str, cmd))
