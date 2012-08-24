@@ -20,8 +20,6 @@ setup(name='Eggcelerator',
       scripts=['scripts/eggcelerator'],
       install_requires=[
         'path.py',
-        
-          # -*- Extra requirements: -*-
       ],
       entry_points="""
       # -*- Entry points: -*-

@@ -11,7 +11,8 @@
 
 # (optional) What is the s3 uri (s3://...) for use with s3cmd sync'ing of the
 # local package cache? 
-# s3_cache = 
+s3_cache = <%= @s3_cache %>
+s3_config = <%= @s3_config %>
 
 [loggers]
 keys = root
@@ -23,7 +24,7 @@ keys = console
 keys = console
 
 [logger_root]
-level = INFO
+level = DEBUG
 handlers = console
 
 [handler_console]

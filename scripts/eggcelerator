@@ -4,6 +4,8 @@ import argparse
 import logging.config
 from ConfigParser import ConfigParser
 
+from path import path
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', default='config.ini')
@@ -18,7 +20,9 @@ def main():
     cp = ConfigParser(defaults=dict(
             remote_package_index='http://pypi.python.org/simple',
             local_cache='~/var/eggcelerator/packages',
-            build_cache='~/var/eggcelerator/build'))
+            build_cache='~/var/eggcelerator/build',
+            s3_bucket=None,
+            s3_config='~/.s3cfg'))
     cp.read(options.config)
     logging.config.fileConfig(options.config)
 
@@ -27,7 +31,11 @@ def main():
         requirement=options.requirement,
         remote_package_index=cp.get('eggcelerator', 'remote_package_index'),
         local_cache=cp.get('eggcelerator', 'local_cache'),
-        build_cache=cp.get('eggcelerator', 'build_cache'))
+        build_cache=cp.get('eggcelerator', 'build_cache'),
+        s3_cache=cp.get('eggcelerator', 's3_cache'),
+        s3_config=cp.get('eggcelerator', 's3_config'),
+        )
+
     app.run_all()
 
 def postmortem_hook(etype, value, tb): # pragma no cover

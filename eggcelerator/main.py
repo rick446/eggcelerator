@@ -1,11 +1,10 @@
-import os
 import sys
 import socket
-import subprocess
 import logging
+from subprocess import check_call, CalledProcessError
 
 from path import path
-from pkg_resources import parse_requirements, Distribution, WorkingSet, get_build_platform
+from pkg_resources import parse_requirements, WorkingSet, get_build_platform
 from setuptools.command.easy_install import PackageIndex, unpack_archive
 
 log = logging.getLogger(__name__)
@@ -14,18 +13,31 @@ class Eggcelerator(object):
 
     def __init__(
         self, requirement=None, remote_package_index=None,
-        local_cache=None, build_cache=None):
+        local_cache=None, build_cache=None,
+        s3_cache=None, s3_config=None):
+        if not s3_cache.endswith('/'): s3_cache += '/'
+        if not local_cache.endswith('/'): local_cache += '/'
+
         self._requirement = requirement
         self._local_cache = path(local_cache).expand()
         self._build_cache = path(build_cache).expand()
         self._pi_remote = PackageIndex(remote_package_index)
         self._pi_local = PackageIndex(self._local_cache)
+        self._s3_cache = s3_cache
+        self._s3_config = path(s3_config).expand()
 
     def run_all(self):
         if not self._local_cache.exists():
             self._local_cache.makedirs()
         if not self._build_cache.exists():
             self._build_cache.makedirs()
+
+        if self._s3_cache:
+            log.info('Initial sync with %s', self._s3_cache)
+            cmd = ['s3cmd', '-c', self._s3_config, 'sync',
+                   self._s3_cache, self._local_cache ]
+            log.debug('Command is %r', map(str, cmd))
+            check_call(cmd)
 
         with open(self._requirement) as fp:
             requirements = list(parse_requirements(fp))
@@ -47,6 +59,13 @@ class Eggcelerator(object):
 
         log.info('Cleanup build directories')
         self._build_cache.rmtree()
+
+        if self._s3_cache:
+            log.info('Final sync with %s', self._s3_cache)
+            cmd = ['s3cmd', '-c', self._s3_config, 'sync',
+                   self._local_cache, self._s3_cache ]
+            log.debug('Command is %r', map(str, cmd))
+            check_call(cmd)
 
     def get_distributions(self, requirements):
         ws = WorkingSet()
@@ -86,8 +105,9 @@ class Eggcelerator(object):
         return bdists[0]
 
     def install_bdist(self, bdist):
-        log.debug('easy_install -i %s %s', self._local_cache, bdist.location)
-        subprocess.check_output(['easy_install', '-i', self._local_cache, bdist.location])
+        log.info('Install %s', bdist.location)
+        check_call([ sys.prefix + '/bin/easy_install',
+                     '-i', self._local_cache, bdist.location])
 
     def download_req(self, req):
         log.debug('Download %s', req)
@@ -129,9 +149,9 @@ class Eggcelerator(object):
     def _build_an_egg(self, build_dir):
         with build_dir:
             try:
-                subprocess.check_output(
+                check_call(
                     [sys.executable, 'setup.py', 'bdist_egg'])
-            except subprocess.CalledProcessError:
+            except CalledProcessError:
                 # Monkey-patch the setup.py to include setuptools instead of distutils
                 path('setup.py').copy('setup-eggcelerator-inner.py')
                 path('setup.py').write_text(
@@ -139,6 +159,6 @@ class Eggcelerator(object):
                     "import setuptools\n"
                     "distutils.core.setup = setuptools.setup\n"
                     "execfile('setup-eggcelerator-inner.py')")
-                subprocess.check_output(
+                check_call(
                     [sys.executable, 'setup.py', 'bdist_egg'])
 
