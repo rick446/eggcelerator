@@ -20,6 +20,7 @@ setup(name='Eggcelerator',
       scripts=['scripts/eggcelerator'],
       install_requires=[
         'path.py',
+        's3cmd',
       ],
       entry_points="""
       # -*- Entry points: -*-
