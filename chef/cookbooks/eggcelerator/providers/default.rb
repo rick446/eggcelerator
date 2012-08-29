@@ -4,6 +4,12 @@ action :create do
   s3cfg = "#{new_resource.virtualenv}/eggcelerator-s3cmd.ini"
   cmd = "#{new_resource.virtualenv}/bin/eggcelerator"
 
+  python_virtualenv "#{new_resource.virtualenv}" do
+    action :create
+    owner new_resource.user
+    group new_resource.group
+  end
+
   template "#{ini}" do
     source "eggcelerator.ini.erb"
     owner new_resource.user
