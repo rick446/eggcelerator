@@ -108,8 +108,14 @@ class Eggcelerator(object):
 
     def install_bdist(self, bdist):
         log.info('Install %s', bdist.location)
-        check_call([ sys.prefix + '/bin/easy_install',
-                     '-i', self._local_cache, bdist.location])
+        cmd = [ sys.prefix + '/bin/easy_install',
+                '-i', self._local_cache, bdist.location]
+        log.debug('Command is %r', map(str, cmd))
+        try:
+            check_call(cmd)
+        except CalledProcessError:
+            log.exception('Error installing %s, retrying', bdist.location)
+            check_call(cmd)
 
     def download_req(self, req):
         log.debug('Download %s', req)
