@@ -3,15 +3,18 @@ action :create do
   ini = "#{new_resource.virtualenv}/eggcelerator.ini"
   s3cfg = "#{new_resource.virtualenv}/eggcelerator-s3cmd.ini"
   cmd = "#{new_resource.virtualenv}/bin/eggcelerator"
+  cookbook = "eggcelerator"
 
   python_virtualenv "#{new_resource.virtualenv}" do
     action :create
+    interpreter new_resource.interpreter
     owner new_resource.user
     group new_resource.group
   end
 
   template "#{ini}" do
     source "eggcelerator.ini.erb"
+    cookbook cookbook
     owner new_resource.user
     group new_resource.group
     variables({ 
@@ -22,6 +25,7 @@ action :create do
 
   template "#{s3cfg}" do
     source "s3cfg.erb"
+    cookbook cookbook
     owner new_resource.user
     group new_resource.group
     variables({ 

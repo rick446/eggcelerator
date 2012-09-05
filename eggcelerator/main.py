@@ -1,13 +1,22 @@
 import sys
 import socket
 import logging
-from subprocess import check_call, CalledProcessError
+from subprocess import Popen, CalledProcessError, PIPE, STDOUT
 
 from path import path
 from pkg_resources import parse_requirements, WorkingSet, get_build_platform
 from setuptools.command.easy_install import PackageIndex, unpack_archive
 
 log = logging.getLogger(__name__)
+
+def check_call(cmd):
+    proc = Popen(cmd, stderr=PIPE, stdin=PIPE)
+    (dout, derr) = proc.communicate()
+    if proc.returncode != 0:
+        log.error('Error calling %s (rc=%d)', cmd, proc.returncode)
+        log.error('Stdout follows:\n%s', dout)
+        log.error('Stdout follows:\n%s', derr)
+        raise CalledProcessError(proc.returncode, cmd)
 
 class Eggcelerator(object):
 
@@ -54,8 +63,9 @@ class Eggcelerator(object):
 
         log.info('Ensure packages have binary eggs locally')
         for req in requirements:
-            bdist = self.ensure_bdist(req)
-            self.install_bdist(bdist)
+            self.ensure_bdist(req)
+            # bdist = self.ensure_bdist(req)
+            # self.install_bdist(bdist)
         log.debug('done.')
 
         log.info('Cleanup build directories')
@@ -71,19 +81,30 @@ class Eggcelerator(object):
 
     def get_distributions(self, requirements):
         ws = WorkingSet()
+        remote_fetches = []
+        def installer(req):
+            dist = find_dist(req)
+            if dist is None: return None
+            self.install_dist(dist)
+            return dist
         def find_dist(req):
             self._pi_local.find_packages(req)
-            for dist in self._pi_local[req.key]:
+            for dist in sorted(self._pi_local[req.key], key=lambda d: -d.precedence):
                 if dist in req: return dist
+            remote_fetches.append(req)
             self._pi_remote.find_packages(req)
-            for dist in self._pi_remote[req.key]:
+            for dist in sorted(self._pi_remote[req.key], key=lambda d: -d.precedence):
                 if dist in req: return dist
-        return ws.resolve(requirements, installer=find_dist)
+        result = ws.resolve(requirements, installer=installer)
+        log.debug('Remote fetches:')
+        for req in remote_fetches:
+            log.debug('%s', req)
+        return result
 
     def ensure_local_req(self, req):
         log.debug('ensure local: %s', req)
         self._pi_local.find_packages(req)
-        for dist in self._pi_local[req.key]:
+        for dist in sorted(self._pi_local[req.key], key=lambda d: -d.precedence):
             if dist in req:
                 log.debug('Found %s to satisfy %s', dist.location, req)
                 break
@@ -105,6 +126,20 @@ class Eggcelerator(object):
             bdists = self.compile_bdist(dists[0])
             log.debug('Compiled bdist: %s', bdists[0].location)
         return bdists[0]
+
+    def install_dist(self, dist):
+        log.info('Install %s', dist.location)
+        cmd_local = [ sys.prefix + '/bin/easy_install',
+                      '-i', self._local_cache, 
+                      dist.location ]
+        cmd_remote = [ sys.prefix + '/bin/easy_install',
+                      dist.location ]
+        log.debug('Command is %r', map(str, cmd_local))
+        try:
+            check_call(cmd_local)
+        except CalledProcessError:
+            log.exception('Error installing %s, retrying', dist.location)
+            check_call(cmd_remote)
 
     def install_bdist(self, bdist):
         log.info('Install %s', bdist.location)

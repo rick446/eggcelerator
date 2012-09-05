@@ -8,3 +8,4 @@ attribute :group, :kind_of => String
 attribute :home, :kind_of => String
 attribute :aws_access, :kind_of => String
 attribute :aws_secret, :kind_of => String
+attribute :interpreter, :kind_of => String, :default => "python"

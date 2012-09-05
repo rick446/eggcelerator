@@ -21,6 +21,7 @@ setup(name='Eggcelerator',
       install_requires=[
         'path.py',
         's3cmd',
+        'argparse', # for those 2.6 throwbacks
       ],
       entry_points="""
       # -*- Entry points: -*-
